@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     response.cookies.set('admin-auth', 'true', {
       httpOnly: true,
-      secure: false, // depois no deploy muda para true
+      secure: true, // depois no deploy muda para true
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 8, // 8 horas

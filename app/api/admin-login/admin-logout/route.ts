@@ -5,7 +5,7 @@ export async function POST() {
 
   response.cookies.set('admin-auth', '', {
     httpOnly: true,
-    secure: false, // depois no deploy muda para true
+    secure: true, // depois no deploy muda para true
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
