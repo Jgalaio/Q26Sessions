@@ -6,14 +6,3 @@ export const metadata: Metadata = {
   description: 'Sistema de votação DJ',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="pt">
-      <body>{children}</body>
-    </html>
-  )
-}
