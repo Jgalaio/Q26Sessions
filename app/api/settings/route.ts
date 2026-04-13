@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
-// GET
 export async function GET() {
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from('settings')
     .select('*')
     .eq('id', 1)
@@ -12,11 +11,10 @@ export async function GET() {
   return NextResponse.json(data)
 }
 
-// POST (update)
 export async function POST(req: Request) {
   const { voting_open } = await req.json()
 
-  await supabase
+  await supabaseAdmin
     .from('settings')
     .update({ voting_open })
     .eq('id', 1)

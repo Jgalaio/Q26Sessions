@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST() {
-  await supabase.from('votes').delete().neq('id', '')
+  await supabaseAdmin.from('votes').delete().neq('id', '')
   return NextResponse.json({ success: true })
 }
