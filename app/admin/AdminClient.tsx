@@ -304,7 +304,7 @@ export default function AdminClient() {
             </button>
           </div>
 
-          {/* CÓDIGOS */}
+          {/* GERAR CÓDIGOS */}
           <div className="p-6 border rounded-xl">
             <h2 className="text-xl font-bold mb-3">Gerar códigos</h2>
 
@@ -323,14 +323,20 @@ export default function AdminClient() {
             </button>
           </div>
 
-          {/* PRINT */}
-          <a
-            href="/admin/print"
-            target="_blank"
-            className="px-6 py-3 bg-purple-600 text-white rounded-xl block text-center"
-          >
-            🖨️ Imprimir QR Codes
-          </a>
+          {/* IMPRESSÃO */}
+          <div className="p-6 border rounded-xl">
+            <h2 className="text-xl font-bold mb-3">
+              Impressão de senhas
+            </h2>
+
+            <a
+              href="/admin/print"
+              target="_blank"
+              className="block w-full text-center px-6 py-3 bg-purple-600 text-white rounded-xl"
+            >
+              🖨️ Abrir impressão de códigos
+            </a>
+          </div>
 
         </div>
       )}
