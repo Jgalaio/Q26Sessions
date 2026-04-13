@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 export default function VotePage() {
   const params = useParams()
+  const router = useRouter()
   const djId = params.dj as string
 
   const [dj, setDj] = useState<any>(null)
@@ -15,17 +16,24 @@ export default function VotePage() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
+  // ================= FETCH DJ =================
   useEffect(() => {
     fetchDj()
   }, [])
 
   const fetchDj = async () => {
-    const res = await fetch(`/api/djs/${djId}`)
-    const data = await res.json()
-    setDj(data)
-    setLoading(false)
+    try {
+      const res = await fetch(`/api/djs/${djId}`)
+      const data = await res.json()
+      setDj(data)
+    } catch {
+      setMessage('Erro ao carregar DJ')
+    } finally {
+      setLoading(false)
+    }
   }
 
+  // ================= VOTAR =================
   const handleVote = async () => {
     if (!code) {
       setMessage('Introduce o código')
@@ -35,25 +43,37 @@ export default function VotePage() {
     setSubmitting(true)
     setMessage('')
 
-    const res = await fetch('/api/vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, dj_id: djId }),
-    })
+    try {
+      const res = await fetch('/api/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, dj_id: djId }),
+      })
 
-    const data = await res.json()
+      const data = await res.json()
 
-    if (!res.ok) {
-      setMessage(data.error)
+      if (!res.ok) {
+        setMessage(data.error)
+        setSubmitting(false)
+        return
+      }
+
+      // ✅ SUCESSO
+      setSuccess(true)
       setSubmitting(false)
-      return
-    }
 
-    setSuccess(true)
-    setSubmitting(false)
+      // ⏳ REDIRECT AUTOMÁTICO
+      setTimeout(() => {
+        router.push('/')
+      }, 3000)
+
+    } catch {
+      setMessage('Erro ao votar')
+      setSubmitting(false)
+    }
   }
 
-  // LOADING
+  // ================= LOADING =================
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black text-white">
@@ -68,12 +88,12 @@ export default function VotePage() {
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full"
       >
 
-        {/* IMAGEM */}
+        {/* IMAGEM DJ */}
         <div className="relative mb-6 rounded-3xl overflow-hidden shadow-2xl">
           <img
             src={dj.image_url}
@@ -89,7 +109,7 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* SUCESSO */}
+        {/* ================= SUCESSO ================= */}
         {success ? (
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -102,6 +122,10 @@ export default function VotePage() {
 
             <p className="text-sm text-zinc-300">
               Obrigado pela tua participação
+            </p>
+
+            <p className="text-xs text-zinc-500 mt-2">
+              A redirecionar...
             </p>
           </motion.div>
         ) : (
@@ -123,7 +147,7 @@ export default function VotePage() {
               {submitting ? 'A votar...' : 'Votar'}
             </button>
 
-            {/* MENSAGEM */}
+            {/* ERRO */}
             {message && (
               <p className="mt-4 text-center text-red-400 font-medium">
                 {message}
@@ -131,6 +155,7 @@ export default function VotePage() {
             )}
           </>
         )}
+
       </motion.div>
     </main>
   )
