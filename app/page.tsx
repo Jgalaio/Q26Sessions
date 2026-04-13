@@ -3,118 +3,108 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 
-type DJ = {
-  id: string
-  name: string
-  image_url: string
-}
-
 export default function HomePage() {
-  const [djs, setDjs] = useState<DJ[]>([])
-  const [totalVotes, setTotalVotes] = useState<number | null>(null)
-  const [loadingVotes, setLoadingVotes] = useState(true)
+  const [djs, setDjs] = useState<any[]>([])
+  const [totalVotes, setTotalVotes] = useState(0)
 
   useEffect(() => {
-    fetchDjs()
-    fetchVotes()
+    fetchRanking()
   }, [])
 
-  const fetchDjs = async () => {
-    try {
-      const res = await fetch('/api/djs')
-      const data = await res.json()
-      setDjs(data || [])
-    } catch (err) {
-      console.error('Erro ao carregar DJs', err)
-    }
-  }
+  const fetchRanking = async () => {
+    const res = await fetch('/api/ranking')
+    const data = await res.json()
 
-  const fetchVotes = async () => {
-    try {
-      const res = await fetch('/api/votes-count')
-      const data = await res.json()
-      setTotalVotes(data.count ?? 0)
-    } catch {
-      setTotalVotes(0)
-    } finally {
-      setLoadingVotes(false)
-    }
+    const total = data.reduce((acc: number, dj: any) => acc + dj.votes, 0)
+
+    setTotalVotes(total)
+    setDjs(data)
   }
 
   return (
-    <main className="min-h-screen bg-white text-black px-6 py-8">
-      <div className="max-w-6xl mx-auto flex flex-col items-center">
+    <main className="min-h-screen bg-white px-6 py-8">
+      <div className="max-w-6xl mx-auto">
 
         {/* TÍTULO */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-14"
-        >
+        <div className="text-center mb-12">
           <img
             src="/tittle.png"
-            alt="Purificação Sessions"
-            className="mx-auto w-full max-w-[520px] object-contain mb-4"
+            className="mx-auto max-w-[500px] mb-4"
           />
 
-          <p className="text-zinc-600 text-base md:text-lg">
-            Escolhe o teu DJ favorito e vota com o teu código único
+          <p className="text-zinc-600">
+            Vota no teu DJ favorito
           </p>
 
-          <div className="mt-5 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50 px-5 py-2 shadow-sm">
-            {loadingVotes ? (
-              <span className="text-sm font-semibold text-fuchsia-700 animate-pulse">
-                A carregar votos...
-              </span>
-            ) : (
-              <span className="text-sm font-semibold text-fuchsia-700">
-                {totalVotes} votos já registados
-              </span>
-            )}
-          </div>
-        </motion.div>
+          <p className="text-sm text-zinc-400 mt-2">
+            {totalVotes} votos registados
+          </p>
+        </div>
 
-        {/* GRID DJs */}
-        {djs.length === 0 ? (
-          <p className="text-zinc-500">Ainda não existem DJs.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-6xl">
-            {djs.map((dj, index) => (
+        {/* GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+
+          {djs.map((dj, index) => {
+            const percent =
+              totalVotes > 0
+                ? Math.round((dj.votes / totalVotes) * 100)
+                : 0
+
+            const isLeader = index === 0
+
+            return (
               <motion.a
                 key={dj.id}
                 href={`/votar/${dj.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-                whileHover={{ scale: 1.02 }}
-                className="group relative h-[320px] rounded-2xl overflow-hidden shadow-lg hover:shadow-[0_0_30px_rgba(217,70,239,0.25)] transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+                className={`relative rounded-2xl overflow-hidden shadow-lg ${
+                  isLeader ? 'ring-4 ring-yellow-400' : ''
+                }`}
               >
+
                 {/* IMAGEM */}
                 <img
                   src={dj.image_url}
-                  alt={dj.name}
-                  className="absolute inset-0 w-full h-full object-cover transition duration-500 group-hover:scale-110"
+                  className="w-full h-[260px] object-cover"
                 />
 
                 {/* OVERLAY */}
-                <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition duration-300" />
+                <div className="absolute inset-0 bg-black/40" />
 
                 {/* CONTEÚDO */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-                  <h2 className="text-white text-2xl md:text-3xl font-black tracking-wide drop-shadow-[0_4px_14px_rgba(0,0,0,0.65)] mb-4">
+                <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
+
+                  <h2 className="text-xl font-bold">
                     {dj.name}
                   </h2>
 
-                  <div className="rounded-2xl px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-fuchsia-500 to-cyan-500 shadow-md group-hover:shadow-[0_0_24px_rgba(34,211,238,0.55)] transition-all duration-300">
-                    Votar
-                  </div>
-                </div>
-              </motion.a>
-            ))}
-          </div>
-        )}
+                  {/* PERCENTAGEM */}
+                  <p className="text-sm font-medium">
+                    {percent}%
+                  </p>
 
+                  {/* BARRA */}
+                  <div className="w-full h-2 bg-white/20 rounded mt-2 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-fuchsia-500 to-cyan-500"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+
+                </div>
+
+                {/* BADGE LÍDER */}
+                {isLeader && (
+                  <div className="absolute top-2 right-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded">
+                    #1
+                  </div>
+                )}
+
+              </motion.a>
+            )
+          })}
+
+        </div>
       </div>
     </main>
   )
