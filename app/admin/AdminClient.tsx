@@ -3,20 +3,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-<button
-  onClick={async () => {
-    await fetch('/api/admin-logout', { method: 'POST' })
-    window.location.href = '/admin-login'
-  }}
-  className="px-4 py-2 bg-red-500 text-white rounded"
->
-  Logout
-</button>
-
 type Tab = 'djs' | 'ranking' | 'control'
 
 export default function AdminClient() {
   const [tab, setTab] = useState<Tab>('djs')
+
   const [djs, setDjs] = useState<any[]>([])
   const [ranking, setRanking] = useState<any[]>([])
   const [votingOpen, setVotingOpen] = useState(true)
@@ -25,7 +16,6 @@ export default function AdminClient() {
   const [newName, setNewName] = useState('')
   const [file, setFile] = useState<File | null>(null)
 
-  // 🎟️ códigos
   const [totalCodes, setTotalCodes] = useState(1000)
   const [loadingCodes, setLoadingCodes] = useState(false)
 
@@ -169,6 +159,12 @@ export default function AdminClient() {
     setLoadingCodes(false)
   }
 
+  // ================= LOGOUT =================
+  const handleLogout = async () => {
+    await fetch('/api/admin-logout', { method: 'POST' })
+    window.location.href = '/admin-login'
+  }
+
   return (
     <main className="p-6 max-w-7xl mx-auto">
 
@@ -176,13 +172,22 @@ export default function AdminClient() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-black">Admin Panel</h1>
 
-        <a
-          href="/live"
-          target="_blank"
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white font-bold"
-        >
-          🎥 LIVE
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/live"
+            target="_blank"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white font-bold"
+          >
+            🎥 LIVE
+          </a>
+
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded-xl"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* TABS */}
@@ -299,11 +304,9 @@ export default function AdminClient() {
             </button>
           </div>
 
-          {/* 🎟️ GERAR CÓDIGOS */}
+          {/* CÓDIGOS */}
           <div className="p-6 border rounded-xl">
-            <h2 className="text-xl font-bold mb-3">
-              Gerar códigos de votação
-            </h2>
+            <h2 className="text-xl font-bold mb-3">Gerar códigos</h2>
 
             <input
               type="number"
@@ -319,6 +322,15 @@ export default function AdminClient() {
               {loadingCodes ? 'A gerar...' : 'Gerar códigos'}
             </button>
           </div>
+
+          {/* PRINT */}
+          <a
+            href="/admin/print"
+            target="_blank"
+            className="px-6 py-3 bg-purple-600 text-white rounded-xl block text-center"
+          >
+            🖨️ Imprimir QR Codes
+          </a>
 
         </div>
       )}
