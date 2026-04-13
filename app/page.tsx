@@ -29,7 +29,7 @@ export default function HomePage() {
         <div className="text-center mb-12">
           <img
             src="/tittle.png"
-            className="mx-auto max-w-[500px] mb-4"
+            className="mx-auto max-w-[250px] mb-4"
           />
 
           <p className="text-zinc-600">
