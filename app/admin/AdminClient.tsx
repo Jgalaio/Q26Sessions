@@ -13,6 +13,7 @@ export default function AdminClient() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
 
+  // ================= INIT =================
   useEffect(() => {
     fetchAll()
   }, [])
@@ -33,6 +34,7 @@ export default function AdminClient() {
   const deleteDj = async (id: string) => {
     await fetch('/api/djs', {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
     fetchDjs()
@@ -41,9 +43,12 @@ export default function AdminClient() {
   const updateName = async (id: string) => {
     await fetch('/api/djs/update', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, name: newName }),
     })
+
     setEditingId(null)
+    setNewName('')
     fetchDjs()
   }
 
@@ -54,17 +59,23 @@ export default function AdminClient() {
     setRanking(data || [])
   }
 
+  // ✅ REALTIME (CORRIGIDO)
   useEffect(() => {
     const channel = supabase
       .channel('votes-pro')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'votes' },
-        fetchRanking
+        () => {
+          fetchRanking()
+        }
       )
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      // 🔥 IMPORTANTE: sem async
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   // ================= SETTINGS =================
@@ -77,15 +88,20 @@ export default function AdminClient() {
   const toggleVoting = async () => {
     await fetch('/api/settings', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ voting_open: !votingOpen }),
     })
+
     setVotingOpen(!votingOpen)
   }
 
   const resetVotes = async () => {
     if (!confirm('Resetar TODOS os votos?')) return
 
-    await fetch('/api/reset', { method: 'POST' })
+    await fetch('/api/reset', {
+      method: 'POST',
+    })
+
     fetchRanking()
   }
 
@@ -107,48 +123,63 @@ export default function AdminClient() {
 
       {/* TABS */}
       <div className="flex gap-3 mb-8">
-        {['djs', 'ranking', 'control'].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t as Tab)}
-            className={`px-4 py-2 rounded-xl font-bold ${
-              tab === t ? 'bg-black text-white' : 'bg-zinc-200'
-            }`}
-          >
-            {t.toUpperCase()}
-          </button>
-        ))}
+        <button onClick={() => setTab('djs')} className={tabBtn(tab === 'djs')}>
+          DJs
+        </button>
+
+        <button onClick={() => setTab('ranking')} className={tabBtn(tab === 'ranking')}>
+          Ranking
+        </button>
+
+        <button onClick={() => setTab('control')} className={tabBtn(tab === 'control')}>
+          Controlo
+        </button>
       </div>
 
       {/* ================= DJs ================= */}
       {tab === 'djs' && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {djs.map((dj) => (
-            <div key={dj.id} className="border rounded-xl p-3">
-              <img src={dj.image_url} className="h-40 w-full object-cover rounded mb-2" />
+            <div key={dj.id} className="border rounded-xl p-3 shadow-sm">
+              <img
+                src={dj.image_url}
+                className="h-40 w-full object-cover rounded mb-2"
+              />
 
               {editingId === dj.id ? (
                 <>
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="border p-2 w-full mb-2"
+                    className="border p-2 w-full mb-2 rounded"
                   />
-                  <button onClick={() => updateName(dj.id)}>Guardar</button>
+
+                  <button
+                    onClick={() => updateName(dj.id)}
+                    className="bg-black text-white px-3 py-1 rounded"
+                  >
+                    Guardar
+                  </button>
                 </>
               ) : (
                 <p className="font-bold">{dj.name}</p>
               )}
 
-              <div className="flex gap-2 mt-2">
-                <button onClick={() => {
-                  setEditingId(dj.id)
-                  setNewName(dj.name)
-                }}>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => {
+                    setEditingId(dj.id)
+                    setNewName(dj.name)
+                  }}
+                  className="px-2 py-1 bg-yellow-400 rounded"
+                >
                   ✏️
                 </button>
 
-                <button onClick={() => deleteDj(dj.id)}>
+                <button
+                  onClick={() => deleteDj(dj.id)}
+                  className="px-2 py-1 bg-red-500 text-white rounded"
+                >
                   ❌
                 </button>
               </div>
@@ -161,11 +192,20 @@ export default function AdminClient() {
       {tab === 'ranking' && (
         <div className="space-y-3">
           {ranking.map((dj, i) => (
-            <div key={dj.id} className="flex items-center gap-4 border p-3 rounded-xl">
+            <div
+              key={dj.id}
+              className="flex items-center gap-4 border p-3 rounded-xl shadow-sm"
+            >
               <div className="w-10 font-black">#{i + 1}</div>
-              <img src={dj.image_url} className="w-12 h-12 rounded object-cover" />
-              <div className="flex-1">{dj.name}</div>
-              <div className="font-bold">{dj.votes}</div>
+
+              <img
+                src={dj.image_url}
+                className="w-12 h-12 rounded object-cover"
+              />
+
+              <div className="flex-1 font-medium">{dj.name}</div>
+
+              <div className="font-bold text-lg">{dj.votes}</div>
             </div>
           ))}
         </div>
@@ -188,12 +228,12 @@ export default function AdminClient() {
               onClick={toggleVoting}
               className="px-6 py-3 bg-black text-white rounded-xl"
             >
-              {votingOpen ? 'Fechar' : 'Abrir'}
+              {votingOpen ? 'Fechar votação' : 'Abrir votação'}
             </button>
           </div>
 
           <div className="p-6 border rounded-xl">
-            <h2 className="text-xl font-bold mb-2">Reset</h2>
+            <h2 className="text-xl font-bold mb-2">Reset geral</h2>
 
             <button
               onClick={resetVotes}
@@ -205,6 +245,16 @@ export default function AdminClient() {
 
         </div>
       )}
+
     </main>
   )
+}
+
+// BOTÃO TABS
+function tabBtn(active: boolean) {
+  return `px-4 py-2 rounded-xl font-bold transition ${
+    active
+      ? 'bg-black text-white'
+      : 'bg-zinc-200 hover:bg-zinc-300'
+  }`
 }
