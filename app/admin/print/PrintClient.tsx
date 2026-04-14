@@ -172,6 +172,62 @@ export default function PrintClient() {
         </div>
       )}
 
+
+      {/* ================= A4 MULTIPÁGINA (3x4 = 12) ================= */}
+      {mode === 'a4' && (
+  <div>
+
+    {Array.from({ length: Math.ceil(items.length / 12) }).map((_, pageIndex) => {
+      const pageItems = items.slice(pageIndex * 12, (pageIndex + 1) * 12)
+
+      return (
+        <div
+          key={pageIndex}
+          className="grid grid-cols-3 gap-4 mb-6 print:mb-0 print:break-after-page"
+        >
+
+          {pageItems.map((item, i) => (
+            <div
+              key={i}
+              className={`border p-3 text-center ${
+                item.distributed ? 'bg-red-100' : 'bg-white'
+              }`}
+              style={{ height: '240px' }}
+            >
+
+              <p className="text-[10px] font-bold">
+                VOTA NO TEU DJ PREFERIDO
+              </p>
+
+              <p className="text-[9px] text-gray-600 mb-2">
+                Quarentões 26 Sessions
+              </p>
+
+              <img src={item.qr} className="w-24 mx-auto mb-3" />
+
+              <p className="text-sm font-bold tracking-[0.2em]">
+                {item.code}
+              </p>
+
+              <p className="text-[9px] mt-1">
+                {item.distributed ? 'ENTREGUE' : 'DISPONÍVEL'}
+              </p>
+
+              <div className="border-t border-dashed border-black text-[9px] mt-2">
+                ✂ cortar aqui
+              </div>
+
+            </div>
+          ))}
+
+        </div>
+      )
+    })}
+
+  </div>
+)}
+
+
       {/* ================= A4 MULTIPÁGINA (4x6 = 24) ================= */}
       {mode === 'a4' && (
         <div>
