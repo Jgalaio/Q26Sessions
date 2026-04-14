@@ -12,7 +12,7 @@ export default function PrintClient() {
   const [end, setEnd] = useState(100)
   const [onlyAvailable, setOnlyAvailable] = useState(true)
 
-  const [mode, setMode] = useState<'ticket' | 'a4'>('ticket')
+  const [mode, setMode] = useState<'ticket' | 'a4-12' | 'a4-24'>('ticket')
 
   // ================= INIT =================
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function PrintClient() {
   const fetchCodes = async () => {
     const res = await fetch('/api/codes')
     const data = await res.json()
-    setCodes(data)
+    setCodes(data || [])
   }
 
   // ================= FILTER =================
@@ -104,7 +104,8 @@ export default function PrintClient() {
           className="border p-2"
         >
           <option value="ticket">🧾 Talão térmico</option>
-          <option value="a4">📄 Folha A4 (24 por página)</option>
+          <option value="a4-12">📄 A4 (3x4 - 12)</option>
+          <option value="a4-24">📄 A4 (4x6 - 24)</option>
         </select>
 
         <button
@@ -135,7 +136,6 @@ export default function PrintClient() {
       {/* ================= TALÃO ================= */}
       {mode === 'ticket' && (
         <div className="flex flex-col items-center gap-4">
-
           {items.map((item, i) => (
             <div
               key={i}
@@ -143,8 +143,7 @@ export default function PrintClient() {
                 item.distributed ? 'bg-red-100' : 'bg-white'
               }`}
             >
-
-              <p className="text-[10px]">
+              <p className="text-[10px] font-bold">
                 VOTA NO TEU DJ PREFERIDO
               </p>
 
@@ -165,73 +164,62 @@ export default function PrintClient() {
               <div className="border-t border-dashed border-black text-[8px] mt-2">
                 ✂ cortar
               </div>
-
             </div>
           ))}
-
         </div>
       )}
 
-
-      {/* ================= A4 MULTIPÁGINA (3x4 = 12) ================= */}
-      {mode === 'a4' && (
-  <div>
-
-    {Array.from({ length: Math.ceil(items.length / 12) }).map((_, pageIndex) => {
-      const pageItems = items.slice(pageIndex * 12, (pageIndex + 1) * 12)
-
-      return (
-        <div
-          key={pageIndex}
-          className="grid grid-cols-3 gap-4 mb-6 print:mb-0 print:break-after-page"
-        >
-
-          {pageItems.map((item, i) => (
-            <div
-              key={i}
-              className={`border p-3 text-center ${
-                item.distributed ? 'bg-red-100' : 'bg-white'
-              }`}
-              style={{ height: '240px' }}
-            >
-
-              <p className="text-[10px] font-bold">
-                VOTA NO TEU DJ PREFERIDO
-              </p>
-
-              <p className="text-[9px] text-gray-600 mb-2">
-                Quarentões 26 Sessions
-              </p>
-
-              <img src={item.qr} className="w-24 mx-auto mb-3" />
-
-              <p className="text-sm font-bold tracking-[0.2em]">
-                {item.code}
-              </p>
-
-              <p className="text-[9px] mt-1">
-                {item.distributed ? 'ENTREGUE' : 'DISPONÍVEL'}
-              </p>
-
-              <div className="border-t border-dashed border-black text-[9px] mt-2">
-                ✂ cortar aqui
-              </div>
-
-            </div>
-          ))}
-
-        </div>
-      )
-    })}
-
-  </div>
-)}
-
-
-      {/* ================= A4 MULTIPÁGINA (4x6 = 24) ================= */}
-      {mode === 'a4' && (
+      {/* ================= A4 3x4 (12) ================= */}
+      {mode === 'a4-12' && (
         <div>
+          {Array.from({ length: Math.ceil(items.length / 12) }).map((_, pageIndex) => {
+            const pageItems = items.slice(pageIndex * 12, (pageIndex + 1) * 12)
 
+            return (
+              <div
+                key={pageIndex}
+                className="grid grid-cols-3 gap-4 mb-6 print:mb-0 print:break-after-page"
+              >
+                {pageItems.map((item, i) => (
+                  <div
+                    key={i}
+                    className={`border p-3 text-center ${
+                      item.distributed ? 'bg-red-100' : 'bg-white'
+                    }`}
+                    style={{ height: '240px' }}
+                  >
+                    <p className="text-[10px] font-bold">
+                      VOTA NO TEU DJ PREFERIDO
+                    </p>
+
+                    <p className="text-[9px] text-gray-600 mb-2">
+                      Quarentões 26 Sessions
+                    </p>
+
+                    <img src={item.qr} className="w-24 mx-auto mb-3" />
+
+                    <p className="text-sm font-bold tracking-[0.2em]">
+                      {item.code}
+                    </p>
+
+                    <p className="text-[9px] mt-1">
+                      {item.distributed ? 'ENTREGUE' : 'DISPONÍVEL'}
+                    </p>
+
+                    <div className="border-t border-dashed border-black text-[9px] mt-2">
+                      ✂ cortar aqui
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ================= A4 4x6 (24) ================= */}
+      {mode === 'a4-24' && (
+        <div>
           {Array.from({ length: Math.ceil(items.length / 24) }).map((_, pageIndex) => {
             const pageItems = items.slice(pageIndex * 24, (pageIndex + 1) * 24)
 
@@ -240,7 +228,6 @@ export default function PrintClient() {
                 key={pageIndex}
                 className="grid grid-cols-4 gap-3 mb-6 print:mb-0 print:break-after-page"
               >
-
                 {pageItems.map((item, i) => (
                   <div
                     key={i}
@@ -249,7 +236,6 @@ export default function PrintClient() {
                     }`}
                     style={{ height: '160px' }}
                   >
-
                     <p className="text-[8px]">
                       VOTA NO TEU DJ
                     </p>
@@ -267,14 +253,11 @@ export default function PrintClient() {
                     <div className="border-t border-dashed border-black text-[7px] mt-1">
                       ✂
                     </div>
-
                   </div>
                 ))}
-
               </div>
             )
           })}
-
         </div>
       )}
 
