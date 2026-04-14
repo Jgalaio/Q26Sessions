@@ -214,6 +214,14 @@ export default function AdminClient() {
             📊 Analytics
           </a>
 
+          <a
+            href="/admin/dj-qrcodes"
+             target="_blank"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
+          >
+            📱 QR DJs
+          </a>
+
           <button
             onClick={handleLogout}
             className="px-4 py-2 bg-red-500 text-white rounded-xl"
