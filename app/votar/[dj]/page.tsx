@@ -8,10 +8,10 @@ export default function VotePage() {
   const { dj } = useParams()
   const router = useRouter()
 
-  const [code, setCode] = useState('')
   const [djData, setDjData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [lastScan, setLastScan] = useState<string | null>(null)
 
   const scannerRef = useRef<any>(null)
 
@@ -21,6 +21,43 @@ export default function VotePage() {
       .then(res => res.json())
       .then(setDjData)
   }, [dj])
+
+  // ================= SOM =================
+  const beep = () => {
+    const audio = new Audio('/beep.mp3')
+    audio.play()
+  }
+
+  // ================= AUTO VOTE =================
+  const autoVote = async (code: string) => {
+    if (loading) return
+
+    setLoading(true)
+
+    const res = await fetch('/api/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        dj_id: dj,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.error)
+    } else {
+      beep()
+      alert('✅ Voto registado!')
+
+      setTimeout(() => {
+        router.push('/')
+      }, 2000)
+    }
+
+    setLoading(false)
+  }
 
   // ================= START SCANNER =================
   const startScanner = async () => {
@@ -39,8 +76,15 @@ export default function VotePage() {
         const match = decodedText.match(/PS-[A-Z0-9]{4}-\d{6}/)
 
         if (match) {
-          setCode(match[0])
+          const code = match[0]
+
+          // 🚫 evitar repetir scans
+          if (code === lastScan) return
+
+          setLastScan(code)
+
           stopScanner()
+          autoVote(code)
         }
       },
       () => {}
@@ -54,39 +98,6 @@ export default function VotePage() {
       await scannerRef.current.clear()
       setScanning(false)
     }
-  }
-
-  // ================= VOTAR =================
-  const handleVote = async () => {
-    if (!code) {
-      alert('Insere um código')
-      return
-    }
-
-    setLoading(true)
-
-    const res = await fetch('/api/vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code,
-        dj_id: dj,
-      }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      alert(data.error)
-    } else {
-      alert('✅ Voto registado!')
-
-      setTimeout(() => {
-        router.push('/')
-      }, 3000)
-    }
-
-    setLoading(false)
   }
 
   if (!djData) return <p className="p-6">A carregar...</p>
@@ -105,41 +116,30 @@ export default function VotePage() {
           {djData.name}
         </h1>
 
-        {/* INPUT */}
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Código"
-          className="w-full border p-3 rounded mb-3 text-center tracking-widest"
-        />
-
-        {/* BOTÕES */}
         {!scanning ? (
           <button
             onClick={startScanner}
-            className="w-full mb-3 py-3 bg-blue-600 text-white rounded"
+            className="w-full py-4 bg-blue-600 text-white rounded text-lg"
           >
-            📷 Scanner em tempo real
+            📷 Iniciar Scanner
           </button>
         ) : (
           <button
             onClick={stopScanner}
-            className="w-full mb-3 py-3 bg-red-600 text-white rounded"
+            className="w-full py-4 bg-red-600 text-white rounded text-lg"
           >
-            ❌ Parar scanner
+            ❌ Parar Scanner
           </button>
         )}
 
-        {/* CAMERA VIEW */}
-        <div id="reader" className="w-full mb-3" />
+        {/* CAMERA */}
+        <div id="reader" className="w-full mt-4" />
 
-        {/* VOTAR */}
-        <button
-          onClick={handleVote}
-          className="w-full py-3 bg-black text-white rounded"
-        >
-          {loading ? 'A votar...' : 'Votar'}
-        </button>
+        {loading && (
+          <p className="mt-4 font-bold">
+            A registar voto...
+          </p>
+        )}
 
       </div>
     </main>
