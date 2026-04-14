@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Tesseract from 'tesseract.js'
+import { Html5Qrcode } from 'html5-qrcode'
 
 export default function VotePage() {
   const { dj } = useParams()
@@ -13,6 +13,8 @@ export default function VotePage() {
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)
 
+  const scannerRef = useRef<any>(null)
+
   // ================= FETCH DJ =================
   useEffect(() => {
     fetch(`/api/djs/${dj}`)
@@ -20,60 +22,44 @@ export default function VotePage() {
       .then(setDjData)
   }, [dj])
 
-  // ================= SCANNER =================
-  const handleScan = async () => {
-    try {
-      setScanning(true)
+  // ================= START SCANNER =================
+  const startScanner = async () => {
+    setScanning(true)
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      })
+    const scanner = new Html5Qrcode("reader")
+    scannerRef.current = scanner
 
-      const video = document.createElement('video')
-      video.srcObject = stream
-      video.setAttribute('playsinline', 'true')
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: 250,
+      },
+      (decodedText) => {
+        const match = decodedText.match(/PS-[A-Z0-9]{4}-\d{6}/)
 
-      await video.play()
+        if (match) {
+          setCode(match[0])
+          stopScanner()
+        }
+      },
+      () => {}
+    )
+  }
 
-      await new Promise((resolve) => {
-        video.onloadedmetadata = resolve
-      })
-
-      const canvas = document.createElement('canvas')
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-
-      const ctx = canvas.getContext('2d')
-      ctx?.drawImage(video, 0, 0)
-
-      stream.getTracks().forEach(track => track.stop())
-
-      const image = canvas.toDataURL('image/png')
-
-      const result = await Tesseract.recognize(image, 'eng')
-
-      const text = result.data.text
-
-      const match = text.match(/PS-[A-Z0-9]{4}-\d{6}/)
-
-      if (match) {
-        setCode(match[0])
-      } else {
-        alert('Código não reconhecido')
-      }
-
-    } catch (err) {
-      console.error(err)
-      alert('Erro ao usar câmara')
+  // ================= STOP =================
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      await scannerRef.current.stop()
+      await scannerRef.current.clear()
+      setScanning(false)
     }
-
-    setScanning(false)
   }
 
   // ================= VOTAR =================
   const handleVote = async () => {
     if (!code) {
-      alert('Insere ou lê um código')
+      alert('Insere um código')
       return
     }
 
@@ -95,7 +81,6 @@ export default function VotePage() {
     } else {
       alert('✅ Voto registado!')
 
-      // voltar à home após 3s
       setTimeout(() => {
         router.push('/')
       }, 3000)
@@ -128,13 +113,25 @@ export default function VotePage() {
           className="w-full border p-3 rounded mb-3 text-center tracking-widest"
         />
 
-        {/* SCAN */}
-        <button
-          onClick={handleScan}
-          className="w-full mb-3 py-3 bg-blue-600 text-white rounded"
-        >
-          {scanning ? 'A ler...' : '📷 Ler código'}
-        </button>
+        {/* BOTÕES */}
+        {!scanning ? (
+          <button
+            onClick={startScanner}
+            className="w-full mb-3 py-3 bg-blue-600 text-white rounded"
+          >
+            📷 Scanner em tempo real
+          </button>
+        ) : (
+          <button
+            onClick={stopScanner}
+            className="w-full mb-3 py-3 bg-red-600 text-white rounded"
+          >
+            ❌ Parar scanner
+          </button>
+        )}
+
+        {/* CAMERA VIEW */}
+        <div id="reader" className="w-full mb-3" />
 
         {/* VOTAR */}
         <button
