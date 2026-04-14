@@ -104,7 +104,7 @@ export default function PrintClient() {
           className="border p-2"
         >
           <option value="ticket">🧾 Talão térmico</option>
-          <option value="a4">📄 Folha A4</option>
+          <option value="a4">📄 Folha A4 (24 por página)</option>
         </select>
 
         <button
@@ -172,48 +172,44 @@ export default function PrintClient() {
         </div>
       )}
 
-      {/* ================= A4 MULTIPÁGINA ================= */}
+      {/* ================= A4 MULTIPÁGINA (4x6 = 24) ================= */}
       {mode === 'a4' && (
         <div>
 
-          {Array.from({ length: Math.ceil(items.length / 12) }).map((_, pageIndex) => {
-            const pageItems = items.slice(pageIndex * 12, (pageIndex + 1) * 12)
+          {Array.from({ length: Math.ceil(items.length / 24) }).map((_, pageIndex) => {
+            const pageItems = items.slice(pageIndex * 24, (pageIndex + 1) * 24)
 
             return (
               <div
                 key={pageIndex}
-                className="grid grid-cols-3 gap-4 mb-6 print:mb-0 print:break-after-page"
+                className="grid grid-cols-4 gap-3 mb-6 print:mb-0 print:break-after-page"
               >
 
                 {pageItems.map((item, i) => (
                   <div
                     key={i}
-                    className={`border p-3 text-center ${
+                    className={`border p-2 text-center ${
                       item.distributed ? 'bg-red-100' : 'bg-white'
                     }`}
-                    style={{ height: '240px' }}
+                    style={{ height: '160px' }}
                   >
 
-                    <p className="text-[10px]">
-                      VOTA NO TEU DJ PREFERIDO
+                    <p className="text-[8px]">
+                      VOTA NO TEU DJ
                     </p>
 
-                    <p className="text-[9px] text-gray-600 mb-1">
-                      Quarentões 26 Sessions
+                    <p className="text-[7px] text-gray-600 mb-1">
+                      Q26 Sessions
                     </p>
 
-                    <img src={item.qr} className="w-24 mx-auto mb-2" />
+                    <img src={item.qr} className="w-16 mx-auto mb-1" />
 
-                    <p className="text-xs font-bold tracking-widest">
+                    <p className="text-[9px] font-bold tracking-widest">
                       {item.code}
                     </p>
 
-                    <p className="text-[8px]">
-                      {item.distributed ? 'ENTREGUE' : 'DISPONÍVEL'}
-                    </p>
-
-                    <div className="border-t border-dashed border-black text-[8px] mt-2">
-                      ✂ cortar
+                    <div className="border-t border-dashed border-black text-[7px] mt-1">
+                      ✂
                     </div>
 
                   </div>
