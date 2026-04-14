@@ -380,3 +380,4 @@ function tabBtn(active: boolean) {
     active ? 'bg-black text-white' : 'bg-zinc-200'
   }`
 }
+
