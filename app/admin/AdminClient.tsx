@@ -222,6 +222,14 @@ export default function AdminClient() {
             📱 QR DJs
           </a>
 
+          <a
+            href="/admin/dj-poster"
+              target="_blank"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold"
+          >
+            🎨 Poster DJs
+          </a>
+
           <button
             onClick={handleLogout}
             className="px-4 py-2 bg-red-500 text-white rounded-xl"
