@@ -14,11 +14,13 @@ export async function POST(req: Request) {
     const ip = rawIp.split(',')[0].trim()
 
     // ================= SETTINGS =================
-    const { data: settings } = await supabaseAdmin
+    const { data: settings, error: settingsError } = await supabaseAdmin
       .from('settings')
       .select('*')
       .eq('id', 1)
       .single()
+
+    if (settingsError) throw settingsError
 
     if (!settings?.voting_open) {
       return NextResponse.json(
@@ -27,26 +29,14 @@ export async function POST(req: Request) {
       )
     }
 
-    // ================= VALIDAR DJ =================
-    const { data: dj } = await supabaseAdmin
-      .from('djs')
-      .select('*')
-      .eq('id', dj_id)
-      .single()
-
-    if (!dj) {
-      return NextResponse.json(
-        { error: 'DJ inválido' },
-        { status: 400 }
-      )
-    }
-
     // ================= VALIDAR CÓDIGO =================
-    const { data: voteCode } = await supabaseAdmin
+    const { data: voteCode, error: codeError } = await supabaseAdmin
       .from('vote_codes')
       .select('*')
       .eq('code', code)
       .maybeSingle()
+
+    if (codeError) throw codeError
 
     if (!voteCode) {
       return NextResponse.json(
@@ -55,7 +45,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 🔥 USAR "used" (CORRIGIDO)
+    // ================= JÁ USADO =================
     if (voteCode.used) {
       return NextResponse.json(
         { error: 'Código já utilizado' },
@@ -66,10 +56,12 @@ export async function POST(req: Request) {
     // ================= LIMITE POR IP =================
     const LIMIT = 50
 
-    const { count } = await supabaseAdmin
+    const { count, error: countError } = await supabaseAdmin
       .from('votes')
       .select('*', { count: 'exact', head: true })
       .eq('ip', ip)
+
+    if (countError) throw countError
 
     if ((count || 0) >= LIMIT) {
       return NextResponse.json(
@@ -91,19 +83,13 @@ export async function POST(req: Request) {
 
     if (voteError) throw voteError
 
-    // ================= ATUALIZAR CÓDIGO =================
-    const { error: codeError } = await supabaseAdmin
+    // ================= MARCAR COMO USADO =================
+    const { error: updateError } = await supabaseAdmin
       .from('vote_codes')
-      .update({
-        used: true,
-        voted_dj_slug: dj.name,
-        voted_at: new Date().toISOString(),
-      })
+      .update({ used: true })
       .eq('code', code)
 
-    if (codeError) throw codeError
-
-    console.log('✅ VOTO REGISTADO:', { code, dj: dj.name })
+    if (updateError) throw updateError
 
     return NextResponse.json({ success: true })
 
