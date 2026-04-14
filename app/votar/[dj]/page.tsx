@@ -23,7 +23,7 @@ export default function VotePage() {
       .then(setDjData)
   }, [dj])
 
-  // ================= SOM + VIBRA =================
+  // ================= FEEDBACK =================
   const feedback = () => {
     const audio = new Audio('/beep.mp3')
     audio.play()
@@ -109,20 +109,20 @@ export default function VotePage() {
         {/* CARD */}
         <div className="rounded-3xl overflow-hidden shadow-2xl border border-zinc-200">
 
-          {/* IMAGE + GLOW */}
+          {/* IMAGE */}
           <div className="relative group">
             <img
               src={djData.image_url}
               className="w-full h-64 object-cover"
             />
 
-            {/* NEON OVERLAY */}
+            {/* DARK OVERLAY */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
 
-            {/* GLOW */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500
-              bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-xl" />
+            {/* NEON GLOW (CORRIGIDO) */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-xl" />
 
+            {/* NAME */}
             <h1 className="absolute bottom-4 left-4 text-white text-2xl font-black tracking-wide">
               {djData.name}
             </h1>
@@ -149,10 +149,7 @@ export default function VotePage() {
             {!scanning ? (
               <button
                 onClick={startScanner}
-                className="w-full py-4 rounded-xl text-white font-bold text-lg
-                bg-gradient-to-r from-fuchsia-500 to-cyan-500
-                shadow-lg shadow-fuchsia-500/30
-                hover:scale-105 transition-all duration-300"
+                className="w-full py-4 rounded-xl text-white font-bold text-lg bg-gradient-to-r from-fuchsia-500 to-cyan-500 shadow-lg shadow-fuchsia-500/30 hover:scale-105 transition-all duration-300"
               >
                 📷 SCAN & VOTAR
               </button>
@@ -165,7 +162,7 @@ export default function VotePage() {
               </button>
             )}
 
-            {/* SCANNER BOX */}
+            {/* SCANNER */}
             <div className="relative">
               <div
                 id="reader"
@@ -174,7 +171,7 @@ export default function VotePage() {
                 }`}
               />
 
-              {/* LASER EFFECT */}
+              {/* LASER */}
               {scanning && (
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="w-full h-1 bg-red-500 animate-[scan_2s_linear_infinite]" />
@@ -188,7 +185,7 @@ export default function VotePage() {
 
       </div>
 
-      {/* ANIMAÇÃO LASER */}
+      {/* ANIMAÇÃO */}
       <style jsx>{`
         @keyframes scan {
           0% { transform: translateY(0); }
