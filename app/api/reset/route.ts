@@ -8,20 +8,14 @@ export async function POST() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    console.log('🔁 RESET START')
-
-    // ================= APAGAR VOTOS =================
+    // 🔥 apagar todos os votos
     const { error: votesError } = await supabase
       .from('votes')
       .delete()
-      .neq('id', 0)
 
-    if (votesError) {
-      console.error('❌ ERRO VOTES:', votesError)
-      throw votesError
-    }
+    if (votesError) throw votesError
 
-    // ================= RESETAR CÓDIGOS =================
+    // 🔥 resetar códigos
     const { error: codesError } = await supabase
       .from('vote_codes')
       .update({
@@ -29,24 +23,16 @@ export async function POST() {
         voted_dj_slug: null,
         voted_at: null,
       })
-      .neq('code', '')
 
-    if (codesError) {
-      console.error('❌ ERRO CODES:', codesError)
-      throw codesError
-    }
+    if (codesError) throw codesError
 
-    console.log('✅ RESET OK')
-
-    return NextResponse.json({
-      success: true,
-    })
+    return NextResponse.json({ success: true })
 
   } catch (error: any) {
-    console.error('🔥 RESET FAIL:', error)
+    console.error(error)
 
     return NextResponse.json(
-      { error: error.message || 'Erro no reset' },
+      { error: error.message },
       { status: 500 }
     )
   }
