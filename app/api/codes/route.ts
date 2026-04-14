@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('vote_codes')
-    .select('code, used')
+    .select('code, used, distributed')
     .order('created_at', { ascending: true })
 
   if (error) {
