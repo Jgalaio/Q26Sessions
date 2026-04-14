@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 
 export default function PrintClient() {
   const [codes, setCodes] = useState<any[]>([])
   const [filtered, setFiltered] = useState<any[]>([])
+  const [items, setItems] = useState<any[]>([])
 
   const [start, setStart] = useState(1)
   const [end, setEnd] = useState(100)
@@ -18,6 +20,10 @@ export default function PrintClient() {
   useEffect(() => {
     applyFilter()
   }, [codes, start, end, onlyAvailable])
+
+  useEffect(() => {
+    generateQR()
+  }, [filtered])
 
   const fetchCodes = async () => {
     const res = await fetch('/api/codes')
@@ -34,6 +40,22 @@ export default function PrintClient() {
 
     const slice = list.slice(start - 1, end)
     setFiltered(slice)
+  }
+
+  // 🔥 GERAR QR CODES
+  const generateQR = async () => {
+    const result = await Promise.all(
+      filtered.map(async (c: any) => {
+        const qr = await QRCode.toDataURL(c.code)
+
+        return {
+          ...c,
+          qr,
+        }
+      })
+    )
+
+    setItems(result)
   }
 
   const markAsDistributed = async () => {
@@ -97,10 +119,10 @@ export default function PrintClient() {
 
       </div>
 
-      {/* TALÕES */}
+      {/* TALÕES COM QR */}
       <div className="flex flex-col gap-4">
 
-        {filtered.map((item, i) => (
+        {items.map((item, i) => (
           <div
             key={i}
             className={`w-[260px] border px-3 py-2 text-center ${
@@ -112,27 +134,23 @@ export default function PrintClient() {
               VOTA NO TEU DJ PREFERIDO
             </p>
 
-            <p className="text-[9px] text-gray-600">
+            <p className="text-[9px] text-gray-600 mb-1">
               Quarentões 26 Sessions
             </p>
 
-            <p className="text-[10px]">
-              --------------------
-            </p>
+            {/* 🔥 QR CODE */}
+            <img src={item.qr} className="w-28 mx-auto mb-2" />
 
-            <p className="text-xl font-bold tracking-[0.3em]">
+            {/* CÓDIGO */}
+            <p className="text-sm font-bold tracking-widest">
               {item.code}
             </p>
 
-            <p className="text-[10px]">
-              --------------------
-            </p>
-
-            <p className="text-[9px]">
+            <p className="text-[9px] mt-1">
               {item.distributed ? 'ENTREGUE' : 'DISPONÍVEL'}
             </p>
 
-            <div className="border-t border-dashed border-black text-[9px] mt-1">
+            <div className="border-t border-dashed border-black text-[9px] mt-2">
               ✂ cortar aqui
             </div>
 
