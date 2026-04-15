@@ -30,3 +30,14 @@ body {
     break-after: page;
   }
 }
+
+@media print {
+  @page {
+    size: A3;
+    margin: 0;
+  }
+
+  body {
+    background: black;
+  }
+}
