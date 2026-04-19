@@ -1,103 +1,117 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { getSupabaseAdmin } from '@/lib/supabase-server'
+import type { Settings, VoteCode } from '@/lib/types'
 
 export async function POST(req: Request) {
   try {
-    const { code, dj_id } = await req.json()
+    const { code, dj_id } = (await req.json()) as {
+      code: string
+      dj_id: string
+    }
+    const supabaseAdmin = getSupabaseAdmin()
 
-    // ================= IP REAL =================
     const rawIp =
       req.headers.get('x-forwarded-for') ||
       req.headers.get('x-real-ip') ||
       'unknown'
-
     const ip = rawIp.split(',')[0].trim()
 
-    // ================= SETTINGS =================
-    const { data: settings, error: settingsError } = await supabaseAdmin
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
       .from('settings')
       .select('*')
       .eq('id', 1)
       .single()
+    const settings = settingsData as Settings | null
 
-    if (settingsError) throw settingsError
+    if (settingsError) {
+      throw settingsError
+    }
 
     if (!settings?.voting_open) {
       return NextResponse.json(
-        { error: 'Votação fechada' },
+        { error: 'VotaÃ§Ã£o fechada' },
         { status: 403 }
       )
     }
 
-    // ================= VALIDAR CÓDIGO =================
-    const { data: voteCode, error: codeError } = await supabaseAdmin
+    const { data: voteCodeData, error: codeError } = await supabaseAdmin
       .from('vote_codes')
       .select('*')
       .eq('code', code)
       .maybeSingle()
+    const voteCode = voteCodeData as VoteCode | null
 
-    if (codeError) throw codeError
+    if (codeError) {
+      throw codeError
+    }
 
     if (!voteCode) {
       return NextResponse.json(
-        { error: 'Código inválido' },
+        { error: 'CÃ³digo invÃ¡lido' },
         { status: 400 }
       )
     }
 
-    // ================= JÁ USADO =================
     if (voteCode.used) {
       return NextResponse.json(
-        { error: 'Código já utilizado' },
+        { error: 'CÃ³digo jÃ¡ utilizado' },
         { status: 400 }
       )
     }
 
-    // ================= LIMITE POR IP =================
-    const LIMIT = 50
+    const limitPerIp = 50
 
     const { count, error: countError } = await supabaseAdmin
       .from('votes')
       .select('*', { count: 'exact', head: true })
       .eq('ip', ip)
 
-    if (countError) throw countError
+    if (countError) {
+      throw countError
+    }
 
-    if ((count || 0) >= LIMIT) {
+    if ((count || 0) >= limitPerIp) {
       return NextResponse.json(
         { error: 'Limite de votos atingido' },
         { status: 429 }
       )
     }
 
-    // ================= INSERIR VOTO =================
+    const votePayload = [
+      {
+        code,
+        dj_id,
+        ip,
+      },
+    ]
+
     const { error: voteError } = await supabaseAdmin
       .from('votes')
-      .insert([
-        {
-          code,
-          dj_id,
-          ip,
-        },
-      ])
+      .insert(votePayload as never)
 
-    if (voteError) throw voteError
+    if (voteError) {
+      throw voteError
+    }
 
-    // ================= MARCAR COMO USADO =================
+    const usedPayload = { used: true }
+
     const { error: updateError } = await supabaseAdmin
       .from('vote_codes')
-      .update({ used: true })
+      .update(usedPayload as never)
       .eq('code', code)
 
-    if (updateError) throw updateError
+    if (updateError) {
+      throw updateError
+    }
 
     return NextResponse.json({ success: true })
-
-  } catch (error: any) {
-    console.error('🔥 ERRO VOTO:', error)
+  } catch (error: unknown) {
+    console.error('Vote error:', error)
 
     return NextResponse.json(
-      { error: error.message || 'Erro ao votar' },
+      {
+        error: error instanceof Error ? error.message : 'Erro ao votar',
+      },
       { status: 500 }
     )
   }

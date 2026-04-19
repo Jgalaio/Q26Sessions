@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { getSupabaseAdmin } from '@/lib/supabase-server'
 
 export async function GET() {
+  const supabaseAdmin = getSupabaseAdmin()
+
   const { data } = await supabaseAdmin
     .from('settings')
     .select('*')
@@ -12,11 +14,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { voting_open } = await req.json()
+  const { voting_open } = (await req.json()) as { voting_open: boolean }
+  const supabaseAdmin = getSupabaseAdmin()
+  const payload = { voting_open }
 
   await supabaseAdmin
     .from('settings')
-    .update({ voting_open })
+    .update(payload as never)
     .eq('id', 1)
 
   return NextResponse.json({ success: true })

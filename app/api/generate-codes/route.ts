@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { getSupabaseAdmin } from '@/lib/supabase-server'
 
 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -17,6 +17,7 @@ function generateCode(index: number) {
 
 export async function POST(req: Request) {
   const { total } = await req.json()
+  const supabaseAdmin = getSupabaseAdmin()
 
   if (!total || total > 100000) {
     return NextResponse.json(
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabaseAdmin
     .from('vote_codes')
-    .insert(codes)
+    .insert(codes as never)
 
   if (error) {
     return NextResponse.json(

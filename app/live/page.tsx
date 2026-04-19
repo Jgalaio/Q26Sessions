@@ -1,26 +1,63 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { AnalyticsData } from '@/lib/types'
 
 export default function LivePage() {
-  const [data, setData] = useState<any>(null)
-
-  const fetchData = async () => {
-    const res = await fetch('/api/analytics')
-    const json = await res.json()
-    setData(json)
-  }
+  const [data, setData] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 5000)
-    return () => clearInterval(interval)
+    let isMounted = true
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/analytics')
+        const json = (await res.json()) as AnalyticsData
+
+        if (!isMounted) {
+          return
+        }
+
+        setData(json)
+        setError('')
+      } catch (loadError) {
+        console.error('Erro ao carregar live:', loadError)
+
+        if (isMounted) {
+          setError('Nao foi possivel carregar os dados live.')
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void load()
+    const interval = setInterval(() => {
+      void load()
+    }, 5000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [])
 
-  if (!data) {
+  if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black text-white text-3xl">
+      <div className="flex h-screen items-center justify-center bg-black text-3xl text-white">
         A carregar...
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black px-6 text-center text-2xl text-white">
+        {error || 'Nao foi possivel carregar os dados.'}
       </div>
     )
   }
@@ -29,84 +66,65 @@ export default function LivePage() {
   const others = data.stats.slice(1)
 
   return (
-    <main className="h-screen bg-black text-white p-8 flex flex-col">
-
-      {/* HEADER */}
-      <div className="text-center mb-6">
-        <h1 className="text-5xl font-black tracking-widest">
-          🔥 LIVE VOTAÇÃO 🔥
-        </h1>
-        <p className="text-xl opacity-70">
-          Total votos: {data.totalVotes}
-        </p>
+    <main className="flex h-screen flex-col bg-black p-8 text-white">
+      <div className="mb-6 text-center">
+        <h1 className="text-5xl font-black tracking-widest">LIVE VOTACAO</h1>
+        <p className="text-xl opacity-70">Total votos: {data.totalVotes}</p>
       </div>
 
-      {/* LÍDER */}
       {leader && (
         <div className="mb-10 text-center">
+          <div className="mb-2 text-2xl opacity-70">Em 1.o lugar</div>
 
-          <div className="text-2xl mb-2 opacity-70">
-            🥇 EM 1º LUGAR
-          </div>
-
-          <div className="inline-block p-6 rounded-3xl bg-gradient-to-r from-fuchsia-500 to-cyan-500">
-
+          <div className="inline-block rounded-3xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 p-6">
             <img
               src={leader.image_url}
-              className="w-48 h-48 object-cover rounded-2xl mx-auto mb-4 border-4 border-white"
+              alt={leader.name}
+              className="mx-auto mb-4 h-48 w-48 rounded-2xl border-4 border-white object-cover"
             />
 
-            <h2 className="text-4xl font-black">
-              {leader.name}
-            </h2>
+            <h2 className="text-4xl font-black">{leader.name}</h2>
 
-            <p className="text-2xl mt-2">
+            <p className="mt-2 text-2xl">
               {leader.votes} votos ({leader.percent}%)
             </p>
-
           </div>
-
         </div>
       )}
 
-      {/* RESTO */}
       <div className="flex-1 space-y-4 overflow-hidden">
-
-        {others.map((dj: any, i: number) => (
+        {others.map((dj, index) => (
           <div
             key={dj.id}
-            className="bg-zinc-900 rounded-2xl p-4 flex items-center gap-4"
+            className="flex items-center gap-4 rounded-2xl bg-zinc-900 p-4"
           >
-
-            <div className="text-2xl font-black w-12 text-center">
-              #{i + 2}
+            <div className="w-12 text-center text-2xl font-black">
+              #{index + 2}
             </div>
 
             <img
               src={dj.image_url}
-              className="w-16 h-16 rounded-xl object-cover"
+              alt={dj.name}
+              className="h-16 w-16 rounded-xl object-cover"
             />
 
             <div className="flex-1">
               <p className="text-xl font-bold">{dj.name}</p>
 
-              <div className="w-full bg-zinc-700 rounded-full h-4 mt-2">
+              <div className="mt-2 h-4 w-full rounded-full bg-zinc-700">
                 <div
-                  className="bg-gradient-to-r from-fuchsia-500 to-cyan-500 h-4 rounded-full transition-all duration-700"
+                  className="h-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-500 transition-all duration-700"
                   style={{ width: `${dj.percent}%` }}
                 />
               </div>
             </div>
 
-            <div className="text-xl font-bold w-32 text-right">
+            <div className="w-32 text-right text-xl font-bold">
               {dj.votes} votos
             </div>
-
           </div>
         ))}
-
       </div>
-
     </main>
   )
 }

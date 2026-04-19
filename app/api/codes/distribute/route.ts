@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { getSupabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST(req: Request) {
   const { codes } = await req.json()
+  const supabaseAdmin = getSupabaseAdmin()
+  const updatePayload = { distributed: true }
 
   const { error } = await supabaseAdmin
     .from('vote_codes')
-    .update({ distributed: true })
+    .update(updatePayload as never)
     .in('code', codes)
 
   if (error) {

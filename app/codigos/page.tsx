@@ -1,13 +1,14 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { ADMIN_COOKIE_NAME, ADMIN_LOGIN_PATH } from '@/lib/admin-auth'
 import codes from '@/data/codes.json'
 
 export default async function CodigosPage() {
   const cookieStore = await cookies()
-  const isAuthenticated = cookieStore.get('admin-auth')?.value === 'true'
+  const isAuthenticated = cookieStore.get(ADMIN_COOKIE_NAME)?.value === 'true'
 
   if (!isAuthenticated) {
-    redirect('/admin/login')
+    redirect(ADMIN_LOGIN_PATH)
   }
 
   return (

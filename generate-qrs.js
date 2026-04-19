@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 const QRCode = require('qrcode')
 const fs = require('fs')
 const path = require('path')
@@ -15,7 +17,6 @@ const DJs = [
   'dj-010',
 ]
 
-// ALTERA ESTE LINK DEPOIS PARA O TEU DOMÍNIO REAL
 const BASE_URL = 'https://purificacaosessions.vercel.app'
 
 const outputDir = path.join(__dirname, 'public', 'qrs')
@@ -38,4 +39,4 @@ async function generate() {
   }
 }
 
-generate()
+void generate()

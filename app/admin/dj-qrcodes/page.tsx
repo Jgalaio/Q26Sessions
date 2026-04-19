@@ -2,95 +2,90 @@
 
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import type { Dj } from '@/lib/types'
+
+type DjQrItem = Dj & {
+  qr: string
+  url: string
+}
 
 export default function DjQRCodesPage() {
-  const [djs, setDjs] = useState<any[]>([])
-  const [items, setItems] = useState<any[]>([])
+  const [items, setItems] = useState<DjQrItem[]>([])
 
   useEffect(() => {
-    fetchDjs()
+    let isMounted = true
+
+    const loadItems = async () => {
+      try {
+        const res = await fetch('/api/djs')
+        const data = (await res.json()) as Dj[]
+        const baseUrl = window.location.origin
+
+        const result = await Promise.all(
+          data.map(async (dj) => {
+            const url = `${baseUrl}/votar/${dj.slug || dj.id}`
+            const qr = await QRCode.toDataURL(url)
+
+            return {
+              ...dj,
+              qr,
+              url,
+            }
+          })
+        )
+
+        if (isMounted) {
+          setItems(result)
+        }
+      } catch (error) {
+        console.error('Erro a gerar QR codes:', error)
+      }
+    }
+
+    void loadItems()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
-  useEffect(() => {
-    generateQR()
-  }, [djs])
-
-  const fetchDjs = async () => {
-    const res = await fetch('/api/djs')
-    const data = await res.json()
-    setDjs(data || [])
-  }
-
-  const generateQR = async () => {
-    const baseUrl = window.location.origin
-
-    const result = await Promise.all(
-      djs.map(async (dj) => {
-        const url = `${baseUrl}/votar/${dj.slug || dj.id}`
-
-        const qr = await QRCode.toDataURL(url)
-
-        return {
-          ...dj,
-          qr,
-          url,
-        }
-      })
-    )
-
-    setItems(result)
-  }
-
   return (
-    <main className="p-6 bg-white">
-
-      {/* BOTÃO PRINT */}
+    <main className="bg-white p-6">
       <div className="mb-4 print:hidden">
         <button
           onClick={() => window.print()}
-          className="px-4 py-2 bg-black text-white rounded"
+          className="rounded bg-black px-4 py-2 text-white"
         >
-          🖨️ Imprimir QR Codes
+          Imprimir QR Codes
         </button>
       </div>
 
-      {/* GRID A4 */}
       <div className="grid grid-cols-2 gap-6">
-
-        {items.map((dj, i) => (
+        {items.map((dj) => (
           <div
-            key={i}
-            className="border p-4 text-center flex flex-col items-center"
-            style={{ height: '400px' }}
+            key={dj.id}
+            className="flex h-[400px] flex-col items-center border p-4 text-center"
           >
-
-            <p className="text-lg font-bold mb-2">
-              VOTA NO TEU DJ
-            </p>
+            <p className="mb-2 text-lg font-bold">VOTA NO TEU DJ</p>
 
             <img
               src={dj.image_url}
-              className="w-32 h-32 object-cover rounded-xl mb-3"
+              alt={dj.name}
+              className="mb-3 h-32 w-32 rounded-xl object-cover"
             />
 
-            <h2 className="text-xl font-black mb-3">
-              {dj.name}
-            </h2>
+            <h2 className="mb-3 text-xl font-black">{dj.name}</h2>
 
             <img
               src={dj.qr}
-              className="w-40 mb-2"
+              alt={`QR para votar no DJ ${dj.name}`}
+              className="mb-2 w-40"
             />
 
-            <p className="text-xs break-all opacity-60">
-              {dj.url}
-            </p>
-
+            <p className="break-all text-xs opacity-60">{dj.url}</p>
           </div>
         ))}
-
       </div>
-
     </main>
   )
 }

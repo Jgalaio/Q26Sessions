@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { getSupabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File
+    const supabaseAdmin = getSupabaseAdmin()
 
     if (!file) {
       return NextResponse.json({ error: 'No file' }, { status: 400 })

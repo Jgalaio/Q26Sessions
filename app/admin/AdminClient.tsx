@@ -2,65 +2,110 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ADMIN_LOGIN_PATH } from '@/lib/admin-auth'
+import type { Dj, RankedDj, Settings } from '@/lib/types'
 
 type Tab = 'djs' | 'ranking' | 'control'
 
+type ApiResponse = {
+  error?: string
+  success?: boolean
+  total?: number
+  url?: string
+}
+
 export default function AdminClient() {
   const [tab, setTab] = useState<Tab>('djs')
-
-  const [djs, setDjs] = useState<any[]>([])
-  const [ranking, setRanking] = useState<any[]>([])
+  const [djs, setDjs] = useState<Dj[]>([])
+  const [ranking, setRanking] = useState<RankedDj[]>([])
   const [votingOpen, setVotingOpen] = useState(true)
-
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [newName, setNewName] = useState('')
+  const [editingName, setEditingName] = useState('')
+  const [newDjName, setNewDjName] = useState('')
   const [file, setFile] = useState<File | null>(null)
-
   const [totalCodes, setTotalCodes] = useState(1000)
   const [loadingCodes, setLoadingCodes] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
 
-  // ================= INIT =================
   useEffect(() => {
-    fetchAll()
+    void fetchAll()
   }, [])
 
-  const fetchAll = () => {
-    fetchDjs()
-    fetchRanking()
-    fetchSettings()
+  useEffect(() => {
+    const channel = supabase
+      .channel('votes-pro')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'votes' },
+        () => {
+          void fetchRanking()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  async function fetchAll() {
+    await Promise.all([fetchDjs(), fetchRanking(), fetchSettings()])
   }
 
-  // ================= DJs =================
-  const fetchDjs = async () => {
+  async function fetchDjs() {
     const res = await fetch('/api/djs')
-    const data = await res.json()
+    const data = (await res.json()) as Dj[]
     setDjs(data || [])
   }
 
-  const deleteDj = async (id: string) => {
+  async function fetchRanking() {
+    const res = await fetch('/api/ranking')
+    const data = (await res.json()) as RankedDj[]
+    setRanking(data || [])
+  }
+
+  async function fetchSettings() {
+    const res = await fetch('/api/settings')
+    const data = (await res.json()) as Settings | null
+    setVotingOpen(data?.voting_open ?? true)
+  }
+
+  async function deleteDj(id: string) {
     await fetch('/api/djs', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
-    fetchDjs()
+
+    await fetchAll()
   }
 
-  const updateName = async (id: string) => {
-    await fetch('/api/djs/update', {
+  async function updateName(id: string) {
+    if (!editingName.trim()) {
+      alert('Preenche o nome do DJ')
+      return
+    }
+
+    const res = await fetch('/api/djs/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, name: newName }),
+      body: JSON.stringify({ id, name: editingName.trim() }),
     })
 
+    const data = (await res.json()) as ApiResponse
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao atualizar DJ')
+      return
+    }
+
     setEditingId(null)
-    setNewName('')
-    fetchDjs()
+    setEditingName('')
+    await fetchAll()
   }
 
-  const handleAdd = async () => {
-    if (!newName || !file) {
+  async function handleAdd() {
+    if (!newDjName.trim() || !file) {
       alert('Preenche nome e imagem')
       return
     }
@@ -73,68 +118,61 @@ export default function AdminClient() {
       body: formData,
     })
 
-    const uploadData = await uploadRes.json()
+    const uploadData = (await uploadRes.json()) as ApiResponse
 
-    await fetch('/api/djs', {
+    if (!uploadRes.ok || !uploadData.url) {
+      alert(uploadData.error || 'Erro ao fazer upload da imagem')
+      return
+    }
+
+    const createRes = await fetch('/api/djs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: newName,
+        name: newDjName.trim(),
         image_url: uploadData.url,
       }),
     })
 
-    setNewName('')
-    setFile(null)
-    fetchDjs()
-  }
+    const createData = (await createRes.json()) as ApiResponse
 
-  // ================= RANKING =================
-  const fetchRanking = async () => {
-    const res = await fetch('/api/ranking')
-    const data = await res.json()
-    setRanking(data || [])
-  }
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('votes-pro')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'votes' },
-        () => fetchRanking()
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+    if (!createRes.ok) {
+      alert(createData.error || 'Erro ao criar DJ')
+      return
     }
-  }, [])
 
-  // ================= SETTINGS =================
-  const fetchSettings = async () => {
-    const res = await fetch('/api/settings')
-    const data = await res.json()
-    setVotingOpen(data.voting_open)
+    setNewDjName('')
+    setFile(null)
+    await fetchAll()
   }
 
-  const toggleVoting = async () => {
-    await fetch('/api/settings', {
+  async function toggleVoting() {
+    const nextValue = !votingOpen
+
+    const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ voting_open: !votingOpen }),
+      body: JSON.stringify({ voting_open: nextValue }),
     })
 
-    setVotingOpen(!votingOpen)
+    const data = (await res.json()) as ApiResponse
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao atualizar o estado da votacao')
+      return
+    }
+
+    setVotingOpen(nextValue)
   }
 
-  // ================= RESET =================
-  const resetVotes = async () => {
+  async function resetVotes() {
     const confirmReset = confirm(
-      '⚠️ ATENÇÃO!\n\nIsto vai apagar TODOS os votos.\n\nContinuar?'
+      'ATENCAO!\n\nIsto vai apagar TODOS os votos.\n\nContinuar?'
     )
 
-    if (!confirmReset) return
+    if (!confirmReset) {
+      return
+    }
 
     setResetLoading(true)
 
@@ -143,24 +181,24 @@ export default function AdminClient() {
         method: 'POST',
       })
 
-      const data = await res.json()
+      const data = (await res.json()) as ApiResponse
 
       if (!res.ok) {
-        alert(data.error)
-      } else {
-        alert('✅ Votos resetados com sucesso')
-        window.location.reload()
+        alert(data.error || 'Erro ao fazer reset')
+        return
       }
-    } catch (err) {
-      console.error(err)
-      alert('Erro ao fazer reset')
-    }
 
-    setResetLoading(false)
+      alert('Votos resetados com sucesso')
+      await fetchAll()
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao fazer reset')
+    } finally {
+      setResetLoading(false)
+    }
   }
 
-  // ================= GERAR CÓDIGOS =================
-  const handleGenerateCodes = async () => {
+  async function handleGenerateCodes() {
     setLoadingCodes(true)
 
     try {
@@ -170,151 +208,175 @@ export default function AdminClient() {
         body: JSON.stringify({ total: totalCodes }),
       })
 
-      const data = await res.json()
+      const data = (await res.json()) as ApiResponse
 
       if (!res.ok) {
-        alert(data.error)
-      } else {
-        alert(`✅ ${data.total} códigos criados!`)
+        alert(data.error || 'Erro ao gerar codigos')
+        return
       }
-    } catch {
-      alert('Erro ao gerar códigos')
-    }
 
-    setLoadingCodes(false)
+      alert(`${data.total || totalCodes} codigos criados!`)
+    } catch (error) {
+      console.error(error)
+      alert('Erro ao gerar codigos')
+    } finally {
+      setLoadingCodes(false)
+    }
   }
 
-  // ================= LOGOUT =================
-  const handleLogout = async () => {
+  async function handleLogout() {
     await fetch('/api/admin-logout', { method: 'POST' })
-    window.location.href = '/admin-login'
+    window.location.href = ADMIN_LOGIN_PATH
   }
 
   return (
-    <main className="p-6 max-w-7xl mx-auto">
-
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-8">
+    <main className="mx-auto max-w-7xl p-6">
+      <div className="mb-8 flex items-center justify-between">
         <h1 className="text-3xl font-black">Admin Panel</h1>
 
         <div className="flex gap-2">
-
           <a
             href="/live"
             target="_blank"
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white font-bold"
+            className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-4 py-2 font-bold text-white"
+            rel="noreferrer"
           >
-            🎥 LIVE
+            LIVE
           </a>
 
           <a
             href="/admin/analytics"
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold"
+            className="rounded-xl bg-blue-600 px-4 py-2 font-bold text-white"
           >
-            📊 Analytics
+            Analytics
           </a>
 
           <a
             href="/admin/dj-qrcodes"
-             target="_blank"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-xl"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl bg-indigo-600 px-4 py-2 text-white"
           >
-            📱 QR DJs
+            QR DJs
           </a>
 
           <a
             href="/admin/dj-poster"
-              target="_blank"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl bg-indigo-600 px-4 py-2 font-bold text-white hover:bg-indigo-700"
           >
-            🎨 Poster DJs
+            Poster DJs
           </a>
 
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 text-white rounded-xl"
+            className="rounded-xl bg-red-500 px-4 py-2 text-white"
           >
             Logout
           </button>
-
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="flex gap-3 mb-8">
-        <button onClick={() => setTab('djs')} className={tabBtn(tab === 'djs')}>DJs</button>
-        <button onClick={() => setTab('ranking')} className={tabBtn(tab === 'ranking')}>Ranking</button>
-        <button onClick={() => setTab('control')} className={tabBtn(tab === 'control')}>Controlo</button>
+      <div className="mb-8 flex gap-3">
+        <button onClick={() => setTab('djs')} className={tabBtn(tab === 'djs')}>
+          DJs
+        </button>
+        <button
+          onClick={() => setTab('ranking')}
+          className={tabBtn(tab === 'ranking')}
+        >
+          Ranking
+        </button>
+        <button
+          onClick={() => setTab('control')}
+          className={tabBtn(tab === 'control')}
+        >
+          Controlo
+        </button>
       </div>
 
-      {/* ================= DJs ================= */}
       {tab === 'djs' && (
         <div>
-
-          <div className="mb-8 p-4 border rounded-xl">
-            <h3 className="font-bold mb-3">Adicionar DJ</h3>
+          <div className="mb-8 rounded-xl border p-4">
+            <h3 className="mb-3 font-bold">Adicionar DJ</h3>
 
             <input
               placeholder="Nome do DJ"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="border p-2 w-full mb-3 rounded"
+              value={newDjName}
+              onChange={(event) => setNewDjName(event.target.value)}
+              className="mb-3 w-full rounded border p-2"
             />
 
             <input
               type="file"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(event) => setFile(event.target.files?.[0] || null)}
               className="mb-3"
             />
 
             <button
               onClick={handleAdd}
-              className="px-4 py-2 bg-black text-white rounded"
+              className="rounded bg-black px-4 py-2 text-white"
             >
-              ➕ Adicionar
+              Adicionar
             </button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-3">
             {djs.map((dj) => (
-              <div key={dj.id} className="border rounded-xl p-3">
-                <img src={dj.image_url} className="h-40 w-full object-cover rounded mb-2" />
+              <div key={dj.id} className="rounded-xl border p-3">
+                <img
+                  src={dj.image_url}
+                  alt={dj.name}
+                  className="mb-2 h-40 w-full rounded object-cover"
+                />
 
                 {editingId === dj.id ? (
                   <>
                     <input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="border p-2 w-full mb-2"
+                      value={editingName}
+                      onChange={(event) => setEditingName(event.target.value)}
+                      className="mb-2 w-full border p-2"
                     />
-                    <button onClick={() => updateName(dj.id)}>Guardar</button>
+                    <button onClick={() => void updateName(dj.id)}>
+                      Guardar
+                    </button>
                   </>
                 ) : (
                   <p className="font-bold">{dj.name}</p>
                 )}
 
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => {
-                    setEditingId(dj.id)
-                    setNewName(dj.name)
-                  }}>✏️</button>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingId(dj.id)
+                      setEditingName(dj.name)
+                    }}
+                  >
+                    Editar
+                  </button>
 
-                  <button onClick={() => deleteDj(dj.id)}>❌</button>
+                  <button onClick={() => void deleteDj(dj.id)}>Apagar</button>
                 </div>
               </div>
             ))}
           </div>
-
         </div>
       )}
 
-      {/* ================= RANKING ================= */}
       {tab === 'ranking' && (
         <div className="space-y-3">
-          {ranking.map((dj, i) => (
-            <div key={dj.id} className="flex items-center gap-4 border p-3 rounded-xl">
-              <div className="w-10 font-black">#{i + 1}</div>
-              <img src={dj.image_url} className="w-12 h-12 rounded object-cover" />
+          {ranking.map((dj, index) => (
+            <div
+              key={dj.id}
+              className="flex items-center gap-4 rounded-xl border p-3"
+            >
+              <div className="w-10 font-black">#{index + 1}</div>
+              <img
+                src={dj.image_url}
+                alt={dj.name}
+                className="h-12 w-12 rounded object-cover"
+              />
               <div className="flex-1">{dj.name}</div>
               <div className="font-bold">{dj.votes}</div>
             </div>
@@ -322,12 +384,10 @@ export default function AdminClient() {
         </div>
       )}
 
-      {/* ================= CONTROL ================= */}
       {tab === 'control' && (
         <div className="space-y-6">
-
-          <div className="p-6 border rounded-xl">
-            <h2 className="text-xl font-bold mb-2">Estado da votação</h2>
+          <div className="rounded-xl border p-6">
+            <h2 className="mb-2 text-xl font-bold">Estado da votacao</h2>
 
             <p className="mb-4">
               <span className={votingOpen ? 'text-green-500' : 'text-red-500'}>
@@ -337,63 +397,61 @@ export default function AdminClient() {
 
             <button
               onClick={toggleVoting}
-              className="px-6 py-3 bg-black text-white rounded-xl"
+              className="rounded-xl bg-black px-6 py-3 text-white"
             >
-              {votingOpen ? 'Fechar votação' : 'Abrir votação'}
+              {votingOpen ? 'Fechar votacao' : 'Abrir votacao'}
             </button>
           </div>
 
-          <div className="p-6 border rounded-xl">
-            <h2 className="text-xl font-bold mb-2">Reset</h2>
+          <div className="rounded-xl border p-6">
+            <h2 className="mb-2 text-xl font-bold">Reset</h2>
 
             <button
               onClick={resetVotes}
-              className="px-6 py-3 bg-red-500 text-white rounded-xl w-full"
+              className="w-full rounded-xl bg-red-500 px-6 py-3 text-white"
             >
-              {resetLoading ? 'A resetar...' : '🔥 Resetar votos'}
+              {resetLoading ? 'A resetar...' : 'Resetar votos'}
             </button>
           </div>
 
-          <div className="p-6 border rounded-xl">
-            <h2 className="text-xl font-bold mb-3">Gerar códigos</h2>
+          <div className="rounded-xl border p-6">
+            <h2 className="mb-3 text-xl font-bold">Gerar codigos</h2>
 
             <input
               type="number"
               value={totalCodes}
-              onChange={(e) => setTotalCodes(Number(e.target.value))}
-              className="border p-3 rounded w-full mb-4"
+              onChange={(event) => setTotalCodes(Number(event.target.value))}
+              className="mb-4 w-full rounded border p-3"
             />
 
             <button
               onClick={handleGenerateCodes}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl w-full"
+              className="w-full rounded-xl bg-blue-600 px-6 py-3 text-white"
             >
-              {loadingCodes ? 'A gerar...' : 'Gerar códigos'}
+              {loadingCodes ? 'A gerar...' : 'Gerar codigos'}
             </button>
           </div>
 
-          <div className="p-6 border rounded-xl">
-            <h2 className="text-xl font-bold mb-3">Impressão de senhas</h2>
+          <div className="rounded-xl border p-6">
+            <h2 className="mb-3 text-xl font-bold">Impressao de senhas</h2>
 
             <a
               href="/admin/print"
               target="_blank"
-              className="block w-full text-center px-6 py-3 bg-purple-600 text-white rounded-xl"
+              rel="noreferrer"
+              className="block w-full rounded-xl bg-purple-600 px-6 py-3 text-center text-white"
             >
-              🖨️ Abrir impressão de códigos
+              Abrir impressao de codigos
             </a>
           </div>
-
         </div>
       )}
-
     </main>
   )
 }
 
 function tabBtn(active: boolean) {
-  return `px-4 py-2 rounded-xl font-bold ${
+  return `rounded-xl px-4 py-2 font-bold ${
     active ? 'bg-black text-white' : 'bg-zinc-200'
   }`
 }
-

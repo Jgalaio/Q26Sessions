@@ -1,38 +1,40 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST() {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabase = getSupabaseAdmin()
+    const resetPayload = { used: false }
 
-    // 🔥 apagar TODOS os votos
     const { error: votesError } = await supabase
       .from('votes')
       .delete()
-      .not('id', 'is', null) // ✅ FIX REAL
+      .not('id', 'is', null)
 
-    if (votesError) throw votesError
+    if (votesError) {
+      throw votesError
+    }
 
-    // 🔥 reset códigos
     const { error: codesError } = await supabase
       .from('vote_codes')
-      .update({
-        used: false,
-      })
-      .not('id', 'is', null) // ✅ igual aqui
+      .update(resetPayload as never)
+      .not('id', 'is', null)
 
-    if (codesError) throw codesError
+    if (codesError) {
+      throw codesError
+    }
 
     return NextResponse.json({ success: true })
-
-  } catch (error: any) {
-    console.error('RESET ERROR:', error)
+  } catch (error: unknown) {
+    console.error('Reset error:', error)
 
     return NextResponse.json(
-      { error: error.message },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao fazer reset',
+      },
       { status: 500 }
     )
   }

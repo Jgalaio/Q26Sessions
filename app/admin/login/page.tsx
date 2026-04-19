@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ADMIN_DASHBOARD_PATH } from '@/lib/admin-auth'
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
@@ -22,12 +23,12 @@ export default function AdminLoginPage() {
     const data = await res.json()
 
     if (!res.ok) {
-      setError(data.message || 'Erro no login')
+      setError(data.error || 'Erro no login')
       setLoading(false)
       return
     }
 
-    router.push('/admin')
+    router.push(ADMIN_DASHBOARD_PATH)
     router.refresh()
   }
 
