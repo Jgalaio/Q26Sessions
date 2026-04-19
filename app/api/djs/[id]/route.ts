@@ -6,27 +6,45 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params
+  const identifier = decodeURIComponent(id)
   const supabaseAdmin = getSupabaseAdmin()
 
-  const { data, error } = await supabaseAdmin
+  const { data: byId, error: idError } = await supabaseAdmin
     .from('djs')
     .select('*')
-    .eq('id', id)
+    .eq('id', identifier)
     .maybeSingle()
 
-  if (error) {
+  if (idError) {
     return NextResponse.json(
-      { error: error.message },
+      { error: idError.message },
       { status: 500 }
     )
   }
 
-  if (!data) {
+  if (byId) {
+    return NextResponse.json(byId)
+  }
+
+  const { data: bySlug, error: slugError } = await supabaseAdmin
+    .from('djs')
+    .select('*')
+    .eq('slug', identifier)
+    .maybeSingle()
+
+  if (slugError) {
+    return NextResponse.json(
+      { error: slugError.message },
+      { status: 500 }
+    )
+  }
+
+  if (!bySlug) {
     return NextResponse.json(
       { error: 'DJ nÃ£o encontrado' },
       { status: 404 }
     )
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(bySlug)
 }

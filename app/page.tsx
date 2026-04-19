@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import type { RankedDj } from '@/lib/types'
 
@@ -93,15 +94,20 @@ export default function HomePage() {
 
             const isLeader = index === 0
 
+            const votePath = `/votar/${encodeURIComponent(dj.slug || dj.id)}`
+
             return (
-              <motion.a
+              <Link
                 key={dj.id}
-                href={`/votar/${dj.id}`}
-                whileHover={{ scale: 1.03 }}
-                className={`relative overflow-hidden rounded-2xl shadow-lg ${
+                href={votePath}
+                className={`block overflow-hidden rounded-2xl shadow-lg ${
                   isLeader ? 'ring-4 ring-yellow-400' : ''
                 }`}
               >
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  className="relative"
+                >
                 {index < 3 && (
                   <div className="absolute left-3 top-3 z-10">
                     <div
@@ -139,7 +145,8 @@ export default function HomePage() {
                     />
                   </div>
                 </div>
-              </motion.a>
+                </motion.div>
+              </Link>
             )
           })}
         </div>

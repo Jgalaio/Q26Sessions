@@ -23,8 +23,16 @@ export default function VotePage() {
     let isMounted = true
 
     const loadDj = async () => {
+      if (!djId) {
+        if (isMounted) {
+          setLoadError('DJ invalido.')
+          setPageLoading(false)
+        }
+        return
+      }
+
       try {
-        const res = await fetch(`/api/djs/${djId}`)
+        const res = await fetch(`/api/djs/${encodeURIComponent(djId)}`)
         const data = (await res.json()) as Partial<Dj> & { error?: string }
 
         if (!isMounted) {
